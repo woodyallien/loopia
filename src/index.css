@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background:247 247 244; --surface:255 255 255; --surface-elevated:255 255 255; --surface-subtle:241 242 238;
+  --text-primary:24 32 29; --text-secondary:87 101 94; --text-tertiary:105 117 111;
+  --border-subtle:20 30 25 / .08; --border-strong:20 30 25 / .16;
+  --brand:35 71 59; --brand-hover:27 58 48; --brand-subtle:230 238 233;
+  --success:53 116 90; --warning:166 110 31; --danger:166 70 70; --info:55 101 126;
+  --focus-ring:182 128 66; --overlay:8 15 12 / .58;
+}
+.dark {
+  --background:16 21 19; --surface:21 28 25; --surface-elevated:27 36 32; --surface-subtle:25 33 29;
+  --text-primary:243 245 242; --text-secondary:178 190 183; --text-tertiary:154 167 160;
+  --border-subtle:255 255 255 / .08; --border-strong:255 255 255 / .16;
+  --brand:190 145 87; --brand-hover:207 163 105; --brand-subtle:49 47 37;
+  --success:103 168 136; --warning:215 160 78; --danger:217 113 113; --info:111 164 194;
+  --focus-ring:214 166 104; --overlay:0 0 0 / .72;
+}
+
+@layer base {
+  * { border-color:rgb(var(--border-subtle)); }
+  html { @apply scroll-smooth; }
+  body { @apply m-0 bg-background font-sans text-primary antialiased; font-feature-settings:'cv02','cv03','cv04','cv11'; }
+  :focus-visible { outline:2px solid rgb(var(--focus-ring)); outline-offset:2px; }
+  button,a,input,select,textarea { @apply transition-colors duration-150; }
+  button { @apply disabled:cursor-not-allowed disabled:opacity-45; }
+  input,select,textarea { color:rgb(var(--text-primary)); }
+  ::selection { background:rgb(var(--brand-subtle)); color:rgb(var(--text-primary)); }
+}
+@layer components {
+  .card { @apply rounded-panel border bg-surface p-5; box-shadow:0 1px 2px rgb(20 30 25 / .025); }
+  .surface-subtle { @apply rounded-panel bg-subtle; }
+  .surface-raised { @apply rounded-panel border bg-elevated shadow-soft; }
+  .btn { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-control px-3.5 py-2 text-sm font-semibold active:scale-[.985] motion-reduce:transform-none; }
+  .btn-primary { @apply btn bg-brand text-white hover:bg-brand-hover dark:text-[#101513]; }
+  .btn-secondary { @apply btn border bg-surface hover:bg-subtle; }
+  .label { @apply mb-1.5 block text-sm font-medium text-primary; }
+  .input { @apply min-h-11 w-full rounded-control border bg-surface px-3 text-sm placeholder:text-tertiary hover:border-[rgb(var(--border-strong))] focus:border-brand; }
+  .eyebrow { @apply text-[11px] font-semibold uppercase tracking-[.14em] text-secondary; }
+  .page-title { @apply text-[28px] font-semibold leading-tight tracking-[-.025em] md:text-[30px]; }
+  .badge { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold; }
+  .metric-number { @apply font-semibold tabular-nums tracking-[-.03em]; }
+  .section-title { @apply text-lg font-semibold tracking-[-.015em]; }
+  .divider-list > * + * { border-top:1px solid rgb(var(--border-subtle)); }
+}
+.text-muted,.dark .text-muted { color:rgb(var(--text-secondary)); }
+.dark .text-clay { color:#dc9a84; }
+.hide-scroll { scrollbar-width:none; }.hide-scroll::-webkit-scrollbar{display:none;}
+label:has(> select[aria-label="Escenario demo"]){display:block!important;} select[aria-label="Escenario demo"]{max-width:7rem;} #app-navigation .text-stone-500{color:#d6d3d1;}
+@media(min-width:640px){select[aria-label="Escenario demo"]{max-width:none;}}
+@media(prefers-reduced-motion:reduce){*,::before,::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;}}
+@keyframes sheet-in{from{transform:translateX(100%)}to{transform:translateX(0)}}
+@keyframes sheet-up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes loop-complete{0%{stroke-dashoffset:90;opacity:0}25%{opacity:1}100%{stroke-dashoffset:0;opacity:0}}
+@keyframes float-soft{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
