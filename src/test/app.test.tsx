@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { test, expect } from "vitest";
 import { MemoryRouter } from "react-router-dom";
@@ -259,4 +259,40 @@ test("onboarding advances through progressive steps", async () => {
   expect(
     await screen.findByRole("heading", { name: "Crea tu primer local" }),
   ).toBeInTheDocument();
+});
+test("demo center starts a guided journey and advances across routes", async () => {
+  sessionStorage.setItem(
+    "loopia-user",
+    JSON.stringify({ name: "Admin", role: "owner" }),
+  );
+  renderApp("/app/demo");
+  expect(
+    await screen.findByRole("heading", { name: "Centro de demostración" }),
+  ).toBeInTheDocument();
+  await userEvent.click(
+    screen.getAllByRole("button", { name: "Iniciar historia" })[0],
+  );
+  expect((await screen.findAllByText("La oportunidad aparece sola")).length).toBeGreaterThan(0);
+  expect(screen.getByText("Modo presentador · 1 de 5")).toBeInTheDocument();
+  await screen.findByRole("heading", { name: "¿Qué está pasando con tus clientes?" });
+  await waitFor(() => expect(document.querySelector('[data-demo-highlight="true"]')).toBeTruthy());
+  await userEvent.click(screen.getByRole("button", { name: "Siguiente" }));
+  expect((await screen.findAllByText("Cliente en riesgo")).length).toBeGreaterThan(0);
+  await userEvent.keyboard("{Escape}");
+  expect(screen.queryByRole("region", { name: "Panel del recorrido demo" })).not.toBeInTheDocument();
+});
+test("demo journey supports customer view and completion handoff", async () => {
+  sessionStorage.setItem(
+    "loopia-user",
+    JSON.stringify({ name: "Admin", role: "owner" }),
+  );
+  renderApp("/app/demo");
+  const card = await screen.findByRole("heading", { name: "Así lo vive tu cliente" });
+  await userEvent.click(card.closest("div.card")?.querySelector("button") as HTMLElement);
+  expect(await screen.findByText("Modo presentador · 1 de 6")).toBeInTheDocument();
+  expect((await screen.findAllByText("Registro simple")).length).toBeGreaterThan(0);
+  await userEvent.click(screen.getByRole("button", { name: "Vista cliente" }));
+  expect(screen.getByText("Vista cliente · 1 de 6")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: /Contraer panel demo/ }));
+  expect(screen.getByRole("region", { name: "Panel del recorrido demo" })).toHaveTextContent("1 de 6");
 });

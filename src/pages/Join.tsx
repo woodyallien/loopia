@@ -32,7 +32,7 @@ export function Join() {
         <p className="mt-2 text-xs text-secondary">Paso {step + 1} de 2 · {step === 0 ? 'Tu cuenta' : 'Tu negocio'}</p>
       </div>
       {step === 0 ? (
-        <form className="mt-6 space-y-4" onSubmit={nextAccount}>
+        <form data-demo="join-form" className="mt-6 space-y-4" onSubmit={nextAccount}>
           <label>
             <span className="label">Nombre</span>
             <input className="input" name="name" required autoComplete="name" defaultValue="María Salazar" />

@@ -30,7 +30,6 @@ import {
 import { Logo } from "../components/Logo";
 import { Badge } from "../components/ui";
 import { CommandPalette } from "../components/CommandPalette";
-import { DemoTour } from "../components/DemoTour";
 import { useApp } from "../context/AppContext";
 import { t, type CopyKey } from "../lib/i18n";
 import { isDemoMode } from "../config/runtime";
@@ -94,8 +93,7 @@ function AdminShell() {
     [collapsed, setCollapsed] = useState(
       () => localStorage.getItem("loopia-sidebar") === "collapsed",
     ),
-    [commands, setCommands] = useState(false),
-    [tour, setTour] = useState(false);
+    [commands, setCommands] = useState(false);
   const drawer = useRef<HTMLElement>(null),
     previous = useRef<HTMLElement | null>(null);
   useEffect(
@@ -252,6 +250,12 @@ function AdminShell() {
                 </p>
               )}
               <SideLink
+                path="/app/demo"
+                label="Centro demo"
+                icon={PlayCircle}
+                collapsed={collapsed}
+              />
+              <SideLink
                 path="/app/impact"
                 label="Impacto"
                 icon={Calculator}
@@ -371,10 +375,7 @@ function AdminShell() {
             {isDemoMode && user?.role === "owner" && (
               <>
                 <button
-                  onClick={() => {
-                    setTour(true);
-                    navigate("/app");
-                  }}
+                  onClick={() => navigate("/app/demo")}
                   className="hidden size-10 place-items-center rounded-control text-secondary hover:bg-subtle xl:grid"
                   aria-label="Iniciar recorrido"
                 >
@@ -460,7 +461,6 @@ function AdminShell() {
           role={user?.role || "owner"}
         />
       )}
-      {tour && <DemoTour onClose={() => setTour(false)} />}
     </div>
   );
 }

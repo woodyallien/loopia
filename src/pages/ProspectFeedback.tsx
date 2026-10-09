@@ -7,6 +7,7 @@ import { demoScenarios } from '../data/scenarios'
 export function ProspectFeedback() {
   const { scenario, user } = useApp()
   const [saved, setSaved] = useState(false)
+  const prefill = JSON.parse(localStorage.getItem('loopia-feedback-prefill') || 'null') as { journey?: string; date?: string; role?: string } | null
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const entry = { ...Object.fromEntries(new FormData(event.currentTarget)), createdAt: new Date().toISOString() }
@@ -38,6 +39,7 @@ export function ProspectFeedback() {
       </section>
 
       <form onSubmit={submit} className="space-y-6 rounded-panel border bg-surface p-5 md:p-6">
+        {prefill && <><input type="hidden" name="journey" value={prefill.journey || ''} readOnly /><input type="hidden" name="demo_date" value={prefill.date || ''} readOnly /><input type="hidden" name="demo_role" value={prefill.role || ''} readOnly /></>}
         <Group title="Operación actual">
           <Select label="Tipo de negocio" name="business_type" defaultValue={demoScenarios[scenario].label} options={['Restaurante', 'Bar', 'Café', 'Otro']} />
           <Select label="Tamaño del negocio" name="business_size" options={['1 local', '2–3 locales', '4–10 locales', 'Más de 10 locales']} />

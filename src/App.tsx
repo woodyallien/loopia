@@ -4,6 +4,7 @@ import { useApp } from './context/AppContext'
 import { PublicLayout } from './layouts/PublicLayout'
 import { isDemoMode } from './config/runtime'
 import { NotFound } from './pages/NotFound'
+import { DemoExperience } from './components/DemoExperience'
 
 const AppLayout = lazy(() => import('./layouts/AppLayout').then(module => ({ default: module.AppLayout })))
 const Landing = lazy(() => import('./pages/Landing').then(module => ({ default: module.Landing })))
@@ -28,6 +29,7 @@ const Settings = lazy(() => import('./pages/Settings').then(module => ({ default
 const ImpactSimulator = lazy(() => import('./pages/ImpactSimulator').then(module => ({ default: module.ImpactSimulator })))
 const ProspectFeedback = lazy(() => import('./pages/ProspectFeedback').then(module => ({ default: module.ProspectFeedback })))
 const Onboarding = lazy(() => import('./pages/Onboarding').then(module => ({ default: module.Onboarding })))
+const DemoCenter = lazy(() => import('./pages/DemoCenter').then(module => ({ default: module.DemoCenter })))
 
 function Loading() {
   return <div className="grid min-h-64 place-items-center" role="status"><span className="flex items-center gap-3 text-sm font-semibold text-muted"><span className="size-5 animate-spin rounded-full border-2 border-gold border-t-transparent motion-reduce:animate-none" /> Cargando experiencia…</span></div>
@@ -51,7 +53,7 @@ function DemoAdminOnly({ children }: { children: ReactNode }) {
 function RouteEffects() {
   const { pathname } = useLocation()
   useEffect(() => {
-    const titles: Record<string, string> = { '/': 'Fidelización para negocios locales', '/login': 'Ingresar', '/join': 'Crear cuenta', '/portal': 'Mis puntos', '/app': 'Dashboard', '/app/customers': 'Clientes', '/app/visits': 'Registrar visita', '/app/loyalty': 'Fidelización', '/app/rewards': 'Recompensas', '/app/campaigns': 'Campañas', '/app/automations': 'Automatizaciones', '/app/referrals': 'Referidos', '/app/partners': 'Red de negocios', '/app/qr': 'Códigos QR', '/app/reports': 'Reportes', '/app/team': 'Equipo', '/app/locations': 'Locales', '/app/settings': 'Configuración', '/app/impact': 'Simulador de impacto', '/app/feedback': 'Feedback del prospecto', '/app/onboarding': 'Configurar Loopia' }
+  const titles: Record<string, string> = { '/': 'Fidelización para negocios locales', '/login': 'Ingresar', '/join': 'Crear cuenta', '/portal': 'Mis puntos', '/app': 'Dashboard', '/app/demo': 'Centro de demostración', '/app/customers': 'Clientes', '/app/visits': 'Registrar visita', '/app/loyalty': 'Fidelización', '/app/rewards': 'Recompensas', '/app/campaigns': 'Campañas', '/app/automations': 'Automatizaciones', '/app/referrals': 'Referidos', '/app/partners': 'Red de negocios', '/app/qr': 'Códigos QR', '/app/reports': 'Reportes', '/app/team': 'Equipo', '/app/locations': 'Locales', '/app/settings': 'Configuración', '/app/impact': 'Simulador de impacto', '/app/feedback': 'Feedback del prospecto', '/app/onboarding': 'Configurar Loopia' }
     const page = pathname.startsWith('/app/customers/') ? 'Historia del cliente' : titles[pathname] || 'Loopia'
     document.title = `${page} | Loopia`
     document.querySelector('meta[name="robots"]')?.setAttribute('content', isDemoMode ? 'noindex, nofollow' : pathname.startsWith('/app') || pathname === '/portal' ? 'noindex, nofollow' : 'index, follow')
@@ -84,7 +86,8 @@ export default function App() {
       <Route path="impact" element={<DemoAdminOnly><ImpactSimulator /></DemoAdminOnly>} />
       <Route path="feedback" element={<DemoAdminOnly><ProspectFeedback /></DemoAdminOnly>} />
       <Route path="onboarding" element={<AdminOnly><Onboarding /></AdminOnly>} />
+      <Route path="demo" element={<DemoAdminOnly><DemoCenter /></DemoAdminOnly>} />
     </Route>
-     <Route path="*" element={<NotFound />} />
-  </Routes></Suspense>
+      <Route path="*" element={<NotFound />} />
+  </Routes><DemoExperience /></Suspense>
 }

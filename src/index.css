@@ -56,3 +56,4 @@ label:has(> select[aria-label="Escenario demo"]){display:block!important;} selec
 @keyframes sheet-up{from{transform:translateY(100%)}to{transform:translateY(0)}}
 @keyframes loop-complete{0%{stroke-dashoffset:90;opacity:0}25%{opacity:1}100%{stroke-dashoffset:0;opacity:0}}
 @keyframes float-soft{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+[data-demo-highlight="true"]{position:relative;z-index:55;outline:3px solid rgb(var(--focus-ring));outline-offset:5px;box-shadow:0 0 0 8px rgb(var(--focus-ring) / .16),0 8px 24px rgb(0 0 0 / .12)}
