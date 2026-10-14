@@ -78,3 +78,16 @@ export function PageHeader({ eyebrow, title, description, actions }: { eyebrow?:
 }
 
 export function Skeleton({ className }: { className?: string }) { return <span className={cn('block animate-pulse rounded-control bg-subtle motion-reduce:animate-none',className)} aria-hidden="true" /> }
+
+export function PageSkeleton({ label }: { label: string }) {
+  return (
+    <div className="space-y-6" role="status">
+      <span className="sr-only">{label}</span>
+      <div className="space-y-2"><Skeleton className="h-4 w-32" /><Skeleton className="h-8 w-72 max-w-full" /></div>
+      <div className="grid gap-px overflow-hidden rounded-panel border bg-[rgb(var(--border-subtle))] sm:grid-cols-2 xl:grid-cols-4">
+        {[0, 1, 2, 3].map(item => <div key={item} className="space-y-3 bg-surface p-5"><Skeleton className="h-3 w-24" /><Skeleton className="h-8 w-20" /><Skeleton className="h-3 w-16" /></div>)}
+      </div>
+      <Skeleton className="h-64 w-full rounded-panel" />
+    </div>
+  )
+}

@@ -1,20 +1,23 @@
+import { useState } from "react";
 import { ArrowRight, Award } from "lucide-react";
-import { Badge } from "../components/ui";
+import { Badge, Button } from "../components/ui";
+import { useOperations } from "../context/OperationsContext";
 import { money } from "../lib/utils";
 
-const stages = [
-  ["Compartieron", 412],
-  ["Se registraron", 158],
-  ["Primera visita", 72],
-  ["Convertidos", 47],
-] as const;
-const leaders = [
-  ["Mateo Vargas", 8, 7, 1050],
-  ["Lucía Flores", 7, 6, 900],
-  ["James Smith", 6, 5, 750],
-  ["Camila Rojas", 5, 4, 600],
-];
 export function Referrals() {
+  const { customers, referrals, settings, saveSettings } = useOperations();
+  const [editing, setEditing] = useState(false);
+  const [friendPoints, setFriendPoints] = useState(settings.referralFriendPoints);
+  const [referrerPoints, setReferrerPoints] = useState(settings.referralReferrerPoints);
+  const converted = referrals.filter(item => item.status === "converted").length;
+  const stages = [
+    ["Compartieron", 412 + referrals.length],
+    ["Se registraron", 158 + referrals.length],
+    ["Primera visita", 72 + converted],
+    ["Convertidos", 47 + converted],
+  ] as const;
+  const leaders = [...customers].sort((a, b) => b.referrals - a.referrals).slice(0, 4);
+  const sales = 6840 + referrals.reduce((sum, item) => sum + item.sales, 0);
   return (
     <div className="space-y-6">
       <header>
@@ -45,14 +48,14 @@ export function Referrals() {
             <p className="text-xs font-medium text-secondary">
               Ventas generadas
             </p>
-            <p className="metric-number mt-2 text-2xl">{money(6840)}</p>
+            <p className="metric-number mt-2 text-2xl">{money(sales)}</p>
             <p className="mt-2 text-xs text-secondary">atribución estimada</p>
           </div>
         </div>
         <div className="border-t p-4">
           <div
             className="flex h-2 overflow-hidden rounded-full bg-subtle"
-            aria-label="Funnel: 412 compartieron, 158 se registraron, 72 visitaron, 47 convirtieron"
+            aria-label={`Funnel: ${stages.map(([label, value]) => `${value} ${label.toLowerCase()}`).join(", ")}`}
           >
             <span className="w-[55%] bg-brand" />
             <span className="w-[21%] bg-success" />
@@ -66,22 +69,22 @@ export function Referrals() {
           <div className="border-b px-4 py-3">
             <h2 className="text-sm font-semibold">Embajadores destacados</h2>
           </div>
-          {leaders.map(([name, invited, converted, points], index) => (
+          {leaders.map((customer, index) => (
             <div
-              key={name}
+              key={customer.id}
               className="grid grid-cols-[32px_1fr_auto] items-center gap-3 border-b px-4 py-3 last:border-0"
             >
               <span className="font-mono text-xs text-tertiary">
                 0{index + 1}
               </span>
               <div>
-                <p className="text-sm font-medium">{name}</p>
+                <p className="text-sm font-medium">{customer.name}</p>
                 <p className="text-xs text-secondary">
-                  {invited} invitaciones · {converted} conversiones
+                  {customer.referrals} conversiones
                 </p>
               </div>
               <strong className="text-xs font-semibold tabular-nums">
-                +{points} pts
+                +{customer.referrals * settings.referralReferrerPoints} pts
               </strong>
             </div>
           ))}
@@ -91,12 +94,18 @@ export function Referrals() {
           <Award className="mt-6 text-brand" />
           <h2 className="mt-3 font-semibold">Dos experiencias mejores</h2>
           <p className="mt-2 text-sm leading-6 text-secondary">
-            El amigo recibe 100 puntos. El embajador recibe 150 después de la
-            primera visita.
+            El amigo recibe {settings.referralFriendPoints} puntos. Quien recomienda recibe {settings.referralReferrerPoints} después de la primera visita.
           </p>
-          <button className="mt-5 text-sm font-semibold text-brand">
+          <button className="mt-5 text-sm font-semibold text-brand" onClick={() => setEditing(value => !value)}>
             Editar incentivo →
           </button>
+          {editing && (
+            <form className="mt-4 space-y-3" onSubmit={event => { event.preventDefault(); saveSettings({ ...settings, referralFriendPoints: friendPoints, referralReferrerPoints: referrerPoints }); setEditing(false); }}>
+              <label><span className="label">Puntos del amigo</span><input className="input" type="number" min={0} value={friendPoints} onChange={event => setFriendPoints(Number(event.target.value))} /></label>
+              <label><span className="label">Puntos de quien recomienda</span><input className="input" type="number" min={0} value={referrerPoints} onChange={event => setReferrerPoints(Number(event.target.value))} /></label>
+              <Button type="submit">Guardar incentivo</Button>
+            </form>
+          )}
         </div>
       </section>
     </div>

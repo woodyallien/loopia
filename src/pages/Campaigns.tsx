@@ -8,8 +8,9 @@ import {
   Plus,
   Send,
 } from "lucide-react";
-import { Badge, Button } from "../components/ui";
-import { campaigns as initialCampaigns } from "../data/mock";
+import { Badge, Button, Empty } from "../components/ui";
+import { useOperations } from "../context/OperationsContext";
+import { daysSince } from "../lib/analytics";
 import { money } from "../lib/utils";
 
 const steps = [
@@ -21,26 +22,39 @@ const steps = [
   "Programación",
 ];
 export function Campaigns() {
-  const [builder, setBuilder] = useState(false),
-    [campaigns, setCampaigns] = useState(initialCampaigns);
+  const { campaigns, customers, saveCampaign, saveAndSend, sendCampaign } = useOperations();
+  const [builder, setBuilder] = useState(false);
+  const inactive = customers.filter((customer) => daysSince(customer.lastVisit) >= 30).length;
   const add = () => {
-    setCampaigns((value) => [
-      {
-        id: `c${value.length + 1}`,
-        name: "Campaña de recuperación",
-        channel: "WhatsApp",
-        audience: "Inactivos 30 días",
-        status: "Borrador",
-        sent: 0,
-        returned: 0,
-        revenue: 0,
-      },
-      ...value,
-    ]);
+    saveCampaign({
+      id: `c${Date.now()}`,
+      name: "Campaña de recuperación",
+      channel: "WhatsApp",
+      audience: "Inactivos 30 días",
+      status: "Borrador",
+      sent: 0,
+      returned: 0,
+      revenue: 0,
+      message: "¡Te extrañamos! Regresa esta semana y recibe 100 puntos extra.",
+    });
+    setBuilder(false);
+  };
+  const sendNew = () => {
+    saveAndSend({
+      id: `c${Date.now()}`,
+      name: "Campaña de recuperación",
+      channel: "WhatsApp",
+      audience: "Inactivos 30 días",
+      status: "Borrador",
+      sent: 0,
+      returned: 0,
+      revenue: 0,
+      message: "¡Te extrañamos! Regresa esta semana y recibe 100 puntos extra.",
+    });
     setBuilder(false);
   };
   if (builder)
-    return <CampaignBuilder onClose={() => setBuilder(false)} onSave={add} />;
+    return <CampaignBuilder inactive={inactive} onClose={() => setBuilder(false)} onSave={add} onSend={sendNew} />;
   return (
     <div data-demo="campaign-builder" className="space-y-5">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -58,10 +72,10 @@ export function Campaigns() {
       </header>
       <section className="grid overflow-hidden rounded-panel border bg-surface sm:grid-cols-4">
         {[
-          ["Activas", "2"],
-          ["Programadas", "1"],
-          ["Conversión reciente", "12.4%"],
-          ["Visitas atribuidas", "94"],
+          ["Activas", String(campaigns.filter((item) => item.status === "Enviada" || item.status === "Completada").length)],
+          ["Programadas", String(campaigns.filter((item) => item.status === "Programada").length)],
+          ["Conversión reciente", `${campaigns.reduce((sum, item) => sum + item.sent, 0) ? ((campaigns.reduce((sum, item) => sum + item.returned, 0) / campaigns.reduce((sum, item) => sum + item.sent, 0)) * 100).toFixed(1) : "0.0"}%`],
+          ["Visitas atribuidas", String(campaigns.reduce((sum, item) => sum + item.returned, 0))],
         ].map(([label, value], index) => (
           <div
             key={label}
@@ -76,78 +90,104 @@ export function Campaigns() {
         <div className="border-b px-4 py-3">
           <h2 className="text-sm font-semibold">Todas las campañas</h2>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-[13px]">
-            <thead className="bg-subtle/60 text-xs text-secondary">
-              <tr>
-                {[
-                  "Campaña",
-                  "Canal",
-                  "Audiencia",
-                  "Estado",
-                  "Regresaron",
-                  "Ventas",
-                ].map((x) => (
-                  <th key={x} className="px-4 py-2.5 font-medium">
-                    {x}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
+        {campaigns.length === 0 ? (
+          <Empty
+            icon={<Send />}
+            title="Aún no hay campañas"
+            text={`Tienes ${inactive} clientes inactivos listos para una campaña de recuperación.`}
+          />
+        ) : (
+          <>
+            <div className="hidden md:block">
+              <table className="w-full text-left text-[13px]">
+                <thead className="bg-subtle/60 text-xs text-secondary">
+                  <tr>
+                    {["Campaña", "Canal", "Audiencia", "Estado", "Regresaron", "Ventas"].map((x) => (
+                      <th key={x} className="px-4 py-2.5 font-medium">
+                        {x}
+                      </th>
+                    ))}
+                    <th className="px-4 py-2.5"><span className="sr-only">Acciones</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {campaigns.map((campaign) => (
+                    <tr key={campaign.id} className="border-t hover:bg-subtle/50">
+                      <td className="px-4 py-3 font-medium">{campaign.name}</td>
+                      <td className="px-4 py-3">
+                        <span className="flex items-center gap-2">
+                          <ChannelIcon channel={campaign.channel} />
+                          {campaign.channel}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-secondary">{campaign.audience}</td>
+                      <td className="px-4 py-3">
+                        <Badge tone={statusTone(campaign.status)}>{campaign.status}</Badge>
+                      </td>
+                      <td className="px-4 py-3 tabular-nums">{campaign.returned}</td>
+                      <td className="px-4 py-3 tabular-nums">{money(campaign.revenue)}</td>
+                      <td className="px-4 py-3 text-right">
+                        {canSend(campaign.status) && (
+                          <Button className="min-h-9 px-3 text-xs" onClick={() => sendCampaign(campaign.id)}>Enviar</Button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <ul className="divide-y md:hidden">
               {campaigns.map((campaign) => (
-                <tr
-                  key={campaign.id}
-                  className="cursor-pointer border-t hover:bg-subtle/50"
-                >
-                  <td className="px-4 py-3 font-medium">{campaign.name}</td>
-                  <td className="px-4 py-3">
-                    <span className="flex items-center gap-2">
-                      {campaign.channel === "WhatsApp" ? (
-                        <MessageCircle size={14} />
-                      ) : (
-                        <Mail size={14} />
-                      )}{" "}
-                      {campaign.channel}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-secondary">
-                    {campaign.audience}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge
-                      tone={
-                        campaign.status === "Completada"
-                          ? "success"
-                          : campaign.status === "Programada"
-                            ? "warning"
-                            : "neutral"
-                      }
-                    >
-                      {campaign.status}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 tabular-nums">
-                    {campaign.returned}
-                  </td>
-                  <td className="px-4 py-3 tabular-nums">
-                    {money(campaign.revenue)}
-                  </td>
-                </tr>
+                <li key={campaign.id} className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{campaign.name}</p>
+                      <p className="mt-0.5 flex items-center gap-1.5 text-xs text-secondary">
+                        <ChannelIcon channel={campaign.channel} /> {campaign.channel} · {campaign.audience}
+                      </p>
+                    </div>
+                    <Badge tone={statusTone(campaign.status)}>{campaign.status}</Badge>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <p className="text-xs text-secondary">
+                      <strong className="text-primary tabular-nums">{campaign.returned}</strong> regresaron ·{" "}
+                      <strong className="text-primary tabular-nums">{money(campaign.revenue)}</strong>
+                    </p>
+                    {canSend(campaign.status) && (
+                      <Button className="min-h-9 px-3 text-xs" onClick={() => sendCampaign(campaign.id)}>Enviar</Button>
+                    )}
+                  </div>
+                </li>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </ul>
+          </>
+        )}
       </section>
     </div>
   );
 }
+function statusTone(status: string) {
+  return status === "Completada" ? "success" : status === "Programada" ? "warning" : "neutral";
+}
+
+function canSend(status: string) {
+  return status === "Borrador" || status === "Programada";
+}
+
+function ChannelIcon({ channel }: { channel: string }) {
+  return channel === "WhatsApp" ? <MessageCircle size={14} /> : <Mail size={14} />;
+}
+
 function CampaignBuilder({
+  inactive,
   onClose,
   onSave,
+  onSend,
 }: {
+  inactive: number;
   onClose: () => void;
   onSave: () => void;
+  onSend: () => void;
 }) {
   const [step, setStep] = useState(0);
   return (
@@ -170,10 +210,15 @@ function CampaignBuilder({
           <p className="eyebrow">Nueva campaña</p>
           <h1 className="page-title mt-1">Campaña de recuperación</h1>
         </div>
-        <Button type="submit" className="ml-auto">
-          <Send size={16} />
-          Guardar borrador
-        </Button>
+        <div className="ml-auto flex gap-2">
+          <Button type="button" variant="secondary" onClick={onSend}>
+            <Send size={16} />
+            Enviar por WhatsApp
+          </Button>
+          <Button type="submit">
+            Guardar borrador
+          </Button>
+        </div>
       </header>
       <div className="grid min-h-[600px] overflow-hidden rounded-feature border bg-surface lg:grid-cols-[180px_1fr_320px]">
         <nav
@@ -198,7 +243,7 @@ function CampaignBuilder({
         </nav>
         <main className="p-5 md:p-8">
           <p className="eyebrow">Paso {step + 1} de 6</p>
-          <StepContent step={step} />
+          <StepContent step={step} inactive={inactive} />
           <div className="mt-8 flex justify-between border-t pt-5">
             <Button
               type="button"
@@ -241,7 +286,7 @@ function CampaignBuilder({
     </form>
   );
 }
-function StepContent({ step }: { step: number }) {
+function StepContent({ step, inactive }: { step: number; inactive: number }) {
   const content = [
     <>
       <h2 className="mt-2 text-xl font-semibold">¿Qué quieres lograr?</h2>
@@ -267,7 +312,7 @@ function StepContent({ step }: { step: number }) {
       <h2 className="mt-2 text-xl font-semibold">Elige tu audiencia</h2>
       <div data-demo="campaign-audience" className="mt-5 rounded-panel border border-brand bg-brand-subtle p-4">
         <p className="text-sm font-medium">
-          Sugerido: 82 clientes inactivos por 30+ días
+          Sugerido: {inactive} clientes inactivos por 30+ días
         </p>
         <p className="mt-1 text-xs text-secondary">
           Alta probabilidad de responder a un incentivo de regreso.

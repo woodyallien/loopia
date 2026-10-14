@@ -5,6 +5,7 @@ import { PublicLayout } from './layouts/PublicLayout'
 import { isDemoMode } from './config/runtime'
 import { NotFound } from './pages/NotFound'
 import { DemoExperience } from './components/DemoExperience'
+import { PageSkeleton } from './components/ui'
 
 const AppLayout = lazy(() => import('./layouts/AppLayout').then(module => ({ default: module.AppLayout })))
 const Landing = lazy(() => import('./pages/Landing').then(module => ({ default: module.Landing })))
@@ -32,7 +33,8 @@ const Onboarding = lazy(() => import('./pages/Onboarding').then(module => ({ def
 const DemoCenter = lazy(() => import('./pages/DemoCenter').then(module => ({ default: module.DemoCenter })))
 
 function Loading() {
-  return <div className="grid min-h-64 place-items-center" role="status"><span className="flex items-center gap-3 text-sm font-semibold text-muted"><span className="size-5 animate-spin rounded-full border-2 border-gold border-t-transparent motion-reduce:animate-none" /> Cargando experiencia…</span></div>
+  const { language } = useApp()
+  return <div className="mx-auto max-w-[1200px] p-4 md:p-6"><PageSkeleton label={language === 'en' ? 'Loading…' : 'Cargando…'} /></div>
 }
 
 function Protected() {

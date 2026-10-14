@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { ArrowLeft, Gift, MessageCircle, Plus, QrCode, Share2, Star } from 'lucide-react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Badge, Button, Progress } from '../components/ui'
-import { customers } from '../data/mock'
+import { useOperations } from '../context/OperationsContext'
+import { nextTier, relativeTime, usablePoints } from '../lib/analytics'
+import { rewards } from '../data/mock'
 import { money } from '../lib/utils'
 
 const tabs = ['Resumen', 'Actividad', 'Recompensas', 'Referidos', 'Campañas'] as const
@@ -10,16 +12,26 @@ type Tab = typeof tabs[number]
 
 export function CustomerDetail() {
   const { id } = useParams()
-  const customer = customers.find(item => item.id === id) || customers[0]
+  const navigate = useNavigate()
+  const operations = useOperations()
+  const customer = operations.customers.find(item => item.id === id) || operations.customers[0]
   const [tab, setTab] = useState<Tab>('Resumen')
+  const [notice, setNotice] = useState('')
+  const balance = usablePoints(customer, operations.settings.rules.expirationDays)
   const isVip = customer.tier === 'VIP'
-  const events = [
-    ['Hoy', 'Visita en Patio Central', 'Compra S/ 83 · +108 puntos'],
-    ['Hace 12 días', 'Recompensa canjeada', 'Café de la casa · -350 puntos'],
-    ['Hace 18 días', 'Referido convertido', 'Ana completó su primera compra · +150 puntos'],
-    ['Hace 24 días', 'Campaña recibida', 'Vuelve este jueves · WhatsApp'],
-    ['12 feb 2026', 'Se registró', 'QR de mesa · Patio Central'],
-  ]
+  const progress = nextTier(balance)
+  const history = operations.visits.filter(visit => visit.customerId === customer.id)
+  const events = history.length ? history.slice(0, 8).map(visit => [relativeTime(visit.at), visit.rewardName ? 'Recompensa canjeada' : 'Visita registrada', visit.rewardName ? `${visit.rewardName} · ${visit.points} puntos` : `${visit.location} · ${visit.amount ? money(visit.amount) : 'sin compra'} · ${visit.points > 0 ? '+' : ''}${visit.points} puntos`]) : [['Hoy', 'Sin movimientos nuevos', 'Las visitas que registres aparecerán aquí.']]
+  const received = operations.campaigns.filter(campaign => campaign.recipientIds?.includes(customer.id))
+  const referred = operations.referrals.filter(item => item.referrerId === customer.id)
+  const givePoints = () => {
+    const result = operations.adjustPoints(customer.id, 50, 'María Salazar')
+    setNotice(result.ok ? 'Se acreditaron 50 puntos.' : 'No se pudieron acreditar puntos.')
+  }
+  const offer = () => {
+    operations.sendOffer(customer)
+    setNotice(`Oferta de WhatsApp preparada para ${customer.name.split(' ')[0]}.`)
+  }
 
   return (
     <div className="space-y-5">
@@ -38,15 +50,15 @@ export function CustomerDetail() {
           <p className="mt-2 text-sm text-secondary">{customer.country} · {customer.language === 'ES' ? 'Español' : 'English'} · {customer.phone}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button className="min-h-10"><Plus size={16} /> Dar puntos</Button>
-          <Button variant="secondary" className="min-h-10"><QrCode size={16} /> Registrar visita</Button>
-          <Button variant="secondary" className="min-h-10"><MessageCircle size={16} /> Enviar oferta</Button>
+          <Button className="min-h-10" onClick={givePoints}><Plus size={16} /> Dar puntos</Button>
+          <Button variant="secondary" className="min-h-10" onClick={() => navigate('/app/visits', { state: { customerId: customer.id } })}><QrCode size={16} /> Registrar visita</Button>
+          <Button variant="secondary" className="min-h-10" onClick={offer}><MessageCircle size={16} /> Enviar oferta</Button>
         </div>
       </header>
 
       <section aria-label="Resumen del cliente" className="grid overflow-hidden rounded-panel border bg-surface sm:grid-cols-2 xl:grid-cols-5">
         {[
-          ['Puntos', customer.points.toLocaleString()],
+          ['Puntos', balance.toLocaleString()],
           ['Visitas', customer.visits],
           ['Gasto', money(customer.spend)],
           ['Última visita', customer.lastVisit],
@@ -59,7 +71,8 @@ export function CustomerDetail() {
         ))}
       </section>
 
-      <div className="border-l-2 border-brand pl-4">
+      {notice && <p role="status" className="text-sm text-secondary">{notice}</p>}
+      <div data-demo="customer-insight" className="border-l-2 border-brand pl-4">
         <p className="text-xs font-semibold uppercase tracking-wider text-secondary">Insight</p>
         <p className="mt-1 text-sm leading-6">
           {customer.name.split(' ')[0]} suele visitar los viernes y lleva {customer.lastVisit.toLowerCase()} sin regresar.
@@ -99,9 +112,9 @@ export function CustomerDetail() {
                 ))}
               </div>
               <div className="mt-5 flex flex-wrap gap-2">
-                <Button className="min-h-10"><MessageCircle size={16} /> Enviar oferta</Button>
-                <Button variant="secondary" className="min-h-10"><Star size={16} /> Reconocer progreso</Button>
-                <Button variant="secondary" className="min-h-10"><Share2 size={16} /> Ver referidos</Button>
+                <Button className="min-h-10" onClick={offer}><MessageCircle size={16} /> Enviar oferta</Button>
+                <Button variant="secondary" className="min-h-10" onClick={givePoints}><Star size={16} /> Reconocer progreso</Button>
+                <Button variant="secondary" className="min-h-10" onClick={() => setTab('Referidos')}><Share2 size={16} /> Ver referidos</Button>
               </div>
             </div>
           )}
@@ -125,7 +138,7 @@ export function CustomerDetail() {
             <div className="p-5">
               <h2 className="section-title">Recompensas</h2>
               <div className="divider-list mt-2">
-                {[['Café de la casa', 'Canjeada · Hace 12 días'], ['Postre para compartir', 'Disponible · 1,100 pts'], ['10% próxima visita', 'Disponible · 700 pts']].map(([name, meta]) => (
+                {rewards.map(reward => [reward.name, balance >= reward.points ? `Disponible · ${reward.points.toLocaleString('es-PE')} pts` : `Te faltan ${(reward.points - balance).toLocaleString('es-PE')} pts`] as const).map(([name, meta]) => (
                   <div key={name} className="flex items-center justify-between gap-3 py-3 text-sm">
                     <span className="font-medium">{name}</span>
                     <span className="text-secondary">{meta}</span>
@@ -137,9 +150,9 @@ export function CustomerDetail() {
           {tab === 'Referidos' && (
             <div className="p-5">
               <h2 className="section-title">Referidos</h2>
-              <p className="mt-2 text-sm text-secondary">{customer.referrals} personas invitadas · conversiones recientes en el embudo.</p>
+              <p className="mt-2 text-sm text-secondary">{customer.referrals} personas invitadas · {referred.length} registradas desde el portal.</p>
               <div className="divider-list mt-3">
-                {[['Ana López', 'Convertido'], ['Pedro Ruiz', 'Pendiente'], ['Elena Díaz', 'Visitó']].slice(0, Math.max(1, customer.referrals)).map(([name, status]) => (
+                {(referred.length ? referred.map(item => [item.referredName, item.status === 'converted' ? 'Convertido' : 'Registrado'] as const) : [['Sin referidos nuevos', 'Pendiente'] as const]).map(([name, status]) => (
                   <div key={name} className="flex justify-between py-3 text-sm"><span className="font-medium">{name}</span><Badge tone={status === 'Convertido' ? 'success' : 'neutral'}>{status}</Badge></div>
                 ))}
               </div>
@@ -149,7 +162,7 @@ export function CustomerDetail() {
             <div className="p-5">
               <h2 className="section-title">Campañas recibidas</h2>
               <div className="divider-list mt-2">
-                {[['Vuelve este jueves', 'WhatsApp · Hace 24 días'], ['Café doble puntos', 'Email · Hace 40 días']].map(([name, meta]) => (
+                {(received.length ? received : operations.campaigns).slice(0, 4).map(campaign => [campaign.name, `${campaign.channel} · ${campaign.status}`] as const).map(([name, meta]) => (
                   <div key={name} className="py-3 text-sm"><p className="font-medium">{name}</p><p className="text-secondary">{meta}</p></div>
                 ))}
               </div>
@@ -165,7 +178,7 @@ export function CustomerDetail() {
               {isVip ? <Gift size={16} className="text-brand" /> : <Star size={16} className="text-brand" />}
             </div>
             <div className="mt-4">
-              <Progress value={isVip ? 100 : 82} label={isVip ? 'Nivel máximo alcanzado' : '180 puntos para el siguiente nivel'} />
+              <Progress value={progress.progress} label={isVip ? 'Nivel máximo alcanzado' : `${progress.remaining.toLocaleString('es-PE')} puntos para ${progress.name}`} />
             </div>
           </div>
           <div className="rounded-panel border bg-surface p-4">
@@ -175,7 +188,7 @@ export function CustomerDetail() {
                 ? 'Enviar una oferta personal antes del jueves para recuperar la visita.'
                 : 'Reconocer su progreso y recordarle la recompensa que está por desbloquear.'}
             </p>
-            <Button className="mt-4 w-full min-h-10">Usar recomendación</Button>
+            <Button className="mt-4 w-full min-h-10" onClick={customer.status === 'En riesgo' ? offer : givePoints}>Usar recomendación</Button>
           </div>
         </aside>
       </div>

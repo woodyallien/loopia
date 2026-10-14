@@ -9,7 +9,7 @@ import {
   Users,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { customers } from "../data/mock";
+import { useOperations } from "../context/OperationsContext";
 import type { Role } from "../lib/types";
 import { Modal } from "./ui";
 
@@ -31,6 +31,7 @@ export function CommandPalette({
   onClose: () => void;
   role: Role;
 }) {
+  const { customers } = useOperations();
   const [query, setQuery] = useState(""),
     [active, setActive] = useState(0);
   const input = useRef<HTMLInputElement>(null);

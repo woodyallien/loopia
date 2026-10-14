@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { CheckCircle2, Gift, Star, Trophy } from "lucide-react";
 import { Badge, Button, Progress } from "../components/ui";
+import { useOperations } from "../context/OperationsContext";
+import type { ProgramRules, VisitRecord } from "../lib/operations";
 
 const tabs = [
   "Resumen",
@@ -17,7 +19,12 @@ const tiers = [
   ["VIP", 24, 6000],
 ] as const;
 export function Loyalty() {
+  const { customers, settings, visits } = useOperations();
   const [tab, setTab] = useState<(typeof tabs)[number]>("Resumen");
+  const tierCounts = customers.reduce<Record<string, number>>((counts, customer) => {
+    counts[customer.tier] = (counts[customer.tier] ?? 0) + 1;
+    return counts;
+  }, {});
   return (
     <div data-demo="loyalty-workspace" className="space-y-5">
       <header>
@@ -43,23 +50,24 @@ export function Loyalty() {
           </button>
         ))}
       </div>
-      {tab === "Resumen" && <Overview />}
-      {tab === "Niveles" && <TierLadder />}
-      {tab === "Reglas" && <Rules />}
-      {tab === "Desafíos" && <Challenges />}
+      {tab === "Resumen" && <Overview customers={customers.length} issued={customers.reduce((sum, customer) => sum + customer.points, 0)} redeemed={visits.filter(visit => visit.points < 0).reduce((sum, visit) => sum + Math.abs(visit.points), 0)} counts={tierCounts} rules={settings.rules} />}
+      {tab === "Niveles" && <TierLadder counts={tierCounts} />}
+      {tab === "Reglas" && <Rules rules={settings.rules} friend={settings.referralFriendPoints} />}
+      {tab === "Desafíos" && <Challenges visits={visits} />}
       {tab === "Recompensas" && <RewardsSummary />}
     </div>
   );
 }
-function Overview() {
+function Overview({ customers, issued, redeemed, counts }: { customers: number; issued: number; redeemed: number; counts: Record<string, number>; rules: ProgramRules }) {
+  const usage = issued ? Math.round((redeemed / issued) * 1000) / 10 : 0;
   return (
     <>
       <section className="grid overflow-hidden rounded-panel border bg-surface sm:grid-cols-4">
         {[
-          ["Miembros", "1,284"],
-          ["Puntos emitidos", "184,200"],
-          ["Puntos canjeados", "42,680"],
-          ["Uso de recompensas", "23.2%"],
+          ["Miembros", customers.toLocaleString("es-PE")],
+          ["Puntos emitidos", issued.toLocaleString("es-PE")],
+          ["Puntos canjeados", redeemed.toLocaleString("es-PE")],
+          ["Uso de recompensas", `${usage}%`],
         ].map(([label, value], index) => (
           <div
             key={label}
@@ -70,7 +78,7 @@ function Overview() {
           </div>
         ))}
       </section>
-      <TierLadder />
+      <TierLadder counts={counts} />
       <section className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-panel border bg-surface p-5">
           <h2 className="text-sm font-semibold">Desafío activo</h2>
@@ -99,7 +107,7 @@ function Overview() {
     </>
   );
 }
-function TierLadder() {
+function TierLadder({ counts }: { counts: Record<string, number> }) {
   return (
     <section className="rounded-panel border bg-surface p-5">
       <div className="flex items-center justify-between">
@@ -121,7 +129,7 @@ function TierLadder() {
               {index === 4 ? <Trophy size={17} /> : <Star size={15} />}
             </span>
             <p className="mt-3 text-sm font-medium">{name}</p>
-            <p className="metric-number mt-1 text-lg">{count}</p>
+            <p className="metric-number mt-1 text-lg">{(counts[name] ?? count).toLocaleString("es-PE")}</p>
             <p className="text-xs text-secondary">
               {threshold.toLocaleString()}+ pts
             </p>
@@ -131,16 +139,18 @@ function TierLadder() {
     </section>
   );
 }
-function Rules() {
+function Rules({ rules, friend }: { rules: ProgramRules; friend: number }) {
   return (
     <section className="overflow-hidden rounded-panel border bg-surface">
       {[
-        ["Compra", "S/ 1 = 1 punto"],
-        ["Visita", "25 puntos"],
-        ["5.ª visita", "100 puntos extra"],
-        ["Referido convertido", "150 puntos"],
+        ["Compra", `S/ 1 = ${rules.pointsPerSol} punto${rules.pointsPerSol === 1 ? "" : "s"}`],
+        ["Visita", `${rules.visitBonus} puntos`],
+        ["5.ª visita", `${rules.milestoneBonus} puntos extra`],
+        ["Referido convertido", `${friend} puntos para el amigo`],
         ["Cumpleaños", "200 puntos"],
-      ].map(([name, value], index) => (
+        ["Tope diario", `${rules.dailyCap} puntos`],
+        ["Vencimiento", rules.expirationDays ? `${rules.expirationDays} días sin visitar` : "Sin vencimiento"],
+      ].map(([name, value]) => (
         <div
           key={name}
           className="flex items-center gap-3 border-b p-4 last:border-0"
@@ -152,11 +162,11 @@ function Rules() {
           </div>
           <button
             role="switch"
-            aria-checked={index < 4}
-            className={`relative h-6 w-10 rounded-full ${index < 4 ? "bg-brand" : "bg-subtle"}`}
+            aria-checked="true"
+            className="relative h-6 w-10 rounded-full bg-brand"
           >
             <span
-              className={`absolute top-1 size-4 rounded-full bg-white ${index < 4 ? "left-5" : "left-1"}`}
+              className="absolute left-5 top-1 size-4 rounded-full bg-white"
             />
           </button>
         </div>
@@ -164,13 +174,22 @@ function Rules() {
     </section>
   );
 }
-function Challenges() {
+function Challenges({ visits }: { visits: VisitRecord[] }) {
+  const month = new Date().getMonth();
+  const counts = new Map<string, number>();
+  visits.forEach(visit => {
+    const date = new Date(visit.at);
+    if (date.getMonth() !== month || visit.points < 0) return;
+    counts.set(visit.customerId, (counts.get(visit.customerId) ?? 0) + 1);
+  });
+  const participants = counts.size;
+  const completed = [...counts.values()].filter(count => count >= 3).length;
   return (
     <section className="rounded-panel border bg-surface p-5">
       <Badge tone="success">Activo</Badge>
       <h2 className="mt-4 text-xl font-medium">Visita 3 veces este mes</h2>
       <p className="mt-1 text-sm text-secondary">
-        312 participantes · 128 completaron · 250 puntos
+        {participants} participantes · {completed} completaron · 250 puntos
       </p>
       <div className="mt-6 max-w-xl">
         <Progress value={41} label="Tasa de finalización" />

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   BarChart3,
@@ -28,19 +28,21 @@ import {
   Zap,
 } from "lucide-react";
 import { Logo } from "../components/Logo";
-import { Badge } from "../components/ui";
+import { Badge, PageSkeleton } from "../components/ui";
 import { CommandPalette } from "../components/CommandPalette";
 import { useApp } from "../context/AppContext";
 import { t, type CopyKey } from "../lib/i18n";
+import { useTr } from "../lib/useTr";
 import { isDemoMode } from "../config/runtime";
 import { cn } from "../lib/utils";
 import { demoScenarios, type DemoScenario } from "../data/scenarios";
 
 type NavItem = [string, CopyKey, typeof LayoutDashboard];
-const groups: { label: string; items: NavItem[] }[] = [
-  { label: "General", items: [["/app", "dashboard", LayoutDashboard]] },
+const groups: { label: string; labelEn: string; items: NavItem[] }[] = [
+  { label: "General", labelEn: "General", items: [["/app", "dashboard", LayoutDashboard]] },
   {
     label: "Clientes",
+    labelEn: "Customers",
     items: [
       ["/app/customers", "customers", Users],
       ["/app/visits", "visits", QrCode],
@@ -49,6 +51,7 @@ const groups: { label: string; items: NavItem[] }[] = [
   },
   {
     label: "Crecimiento",
+    labelEn: "Growth",
     items: [
       ["/app/loyalty", "loyalty", Star],
       ["/app/rewards", "rewards", Gift],
@@ -56,9 +59,10 @@ const groups: { label: string; items: NavItem[] }[] = [
       ["/app/automations", "automations", Zap],
     ],
   },
-  { label: "Análisis", items: [["/app/reports", "reports", BarChart3]] },
+  { label: "Análisis", labelEn: "Insights", items: [["/app/reports", "reports", BarChart3]] },
   {
     label: "Negocio",
+    labelEn: "Business",
     items: [
       ["/app/partners", "partners", Handshake],
       ["/app/locations", "locations", Building2],
@@ -87,6 +91,7 @@ function AdminShell() {
     resetDemo,
     setDemoRole,
   } = useApp();
+  const tr = useTr();
   const navigate = useNavigate(),
     location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false),
@@ -165,7 +170,7 @@ function AdminShell() {
         href="#main-content"
         className="fixed left-3 top-3 z-[70] -translate-y-20 rounded-control bg-surface px-4 py-2 font-semibold shadow-overlay focus:translate-y-0"
       >
-        Saltar al contenido
+        {tr("Saltar al contenido", "Skip to content")}
       </a>
       {mobileOpen && (
         <div
@@ -182,7 +187,7 @@ function AdminShell() {
           collapsed ? "w-16" : "w-[232px]",
           mobileOpen ? "visible translate-x-0" : "invisible -translate-x-full",
         )}
-        aria-label="Navegación principal"
+        aria-label={tr("Navegación principal", "Main navigation")}
       >
         <div
           className={cn(
@@ -194,7 +199,7 @@ function AdminShell() {
           <button
             onClick={() => setMobileOpen(false)}
             className="grid size-11 place-items-center rounded-control lg:hidden"
-            aria-label="Cerrar menú"
+            aria-label={tr("Cerrar menú", "Close menu")}
           >
             <X size={18} />
           </button>
@@ -208,7 +213,9 @@ function AdminShell() {
               <strong className="block truncate text-sm font-semibold">
                 {demoScenarios[scenario].organization.replace(" Demo", "")}
               </strong>
-              <span className="text-xs text-secondary">3 locales</span>
+              <span className="text-xs text-secondary">
+                {demoScenarios[scenario].locations.length} {tr("locales", "locations")}
+              </span>
             </span>
             <ChevronRight size={14} className="text-tertiary" />
           </button>
@@ -218,7 +225,7 @@ function AdminShell() {
             <div key={group.label} className="mb-4">
               {!collapsed && (
                 <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-[.12em] text-tertiary">
-                  {group.label}
+                  {tr(group.label, group.labelEn)}
                 </p>
               )}
               {group.items.map(([path, key, Icon]) => (
@@ -246,18 +253,18 @@ function AdminShell() {
             <div className="border-t pt-3">
               {!collapsed && (
                 <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-[.12em] text-tertiary">
-                  Validación
+                  {tr("Validación", "Validation")}
                 </p>
               )}
               <SideLink
                 path="/app/demo"
-                label="Centro demo"
+                label={tr("Centro demo", "Demo center")}
                 icon={PlayCircle}
                 collapsed={collapsed}
               />
               <SideLink
                 path="/app/impact"
-                label="Impacto"
+                label={tr("Impacto", "Impact")}
                 icon={Calculator}
                 collapsed={collapsed}
               />
@@ -273,7 +280,7 @@ function AdminShell() {
         <div className="border-t p-2">
           <SideLink
             path="/app/settings"
-            label="Configuración"
+            label={t(language, "settings")}
             icon={Settings}
             collapsed={collapsed}
           />
@@ -282,10 +289,10 @@ function AdminShell() {
               "flex h-10 w-full items-center rounded-control text-sm text-secondary hover:bg-subtle",
               collapsed ? "justify-center" : "gap-3 px-2.5",
             )}
-            title={collapsed ? "Ayuda" : undefined}
+            title={collapsed ? tr("Ayuda", "Help") : undefined}
           >
             <HelpCircle size={18} />
-            {!collapsed && "Ayuda"}
+            {!collapsed && tr("Ayuda", "Help")}
           </button>
           {!collapsed && (
             <div className="mt-2 flex items-center gap-2 border-t pt-3">
@@ -294,12 +301,12 @@ function AdminShell() {
               </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{user?.name}</p>
-                <p className="text-xs text-secondary">Propietaria</p>
+                <p className="text-xs text-secondary">{tr("Propietaria", "Owner")}</p>
               </div>
               <button
                 onClick={signOut}
                 className="grid size-9 place-items-center rounded-control"
-                aria-label="Cerrar sesión"
+                aria-label={tr("Cerrar sesión", "Log out")}
               >
                 <LogOut size={16} />
               </button>
@@ -310,7 +317,9 @@ function AdminShell() {
           onClick={() => setCollapsed((value) => !value)}
           className="absolute -right-3 top-24 hidden size-6 place-items-center rounded-full border bg-surface text-secondary shadow-sm lg:grid"
           aria-label={
-            collapsed ? "Expandir barra lateral" : "Colapsar barra lateral"
+            collapsed
+              ? tr("Expandir barra lateral", "Expand sidebar")
+              : tr("Colapsar barra lateral", "Collapse sidebar")
           }
         >
           {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
@@ -327,18 +336,18 @@ function AdminShell() {
           <button
             className="grid size-11 place-items-center rounded-control lg:hidden"
             onClick={() => setMobileOpen(true)}
-            aria-label="Abrir menú"
+            aria-label={tr("Abrir menú", "Open menu")}
           >
             <Menu size={19} />
           </button>
           <button
             onClick={() => setCommands(true)}
-            aria-label="Buscar o ejecutar"
+            aria-label={tr("Buscar o ejecutar", "Search or run")}
             aria-expanded={commands}
             className="flex h-9 min-w-0 max-w-md flex-1 items-center gap-2 rounded-control border bg-surface px-3 text-sm text-secondary hover:border-[rgb(var(--border-strong))] sm:flex-none sm:w-72"
           >
             <Search size={16} />
-            <span className="truncate">Buscar o ejecutar…</span>
+            <span className="truncate">{tr("Buscar o ejecutar…", "Search or run…")}</span>
             <kbd className="ml-auto hidden rounded border bg-subtle px-1.5 py-0.5 text-[10px] sm:inline">
               ⌘K
             </kbd>
@@ -366,9 +375,9 @@ function AdminShell() {
                   className="h-8 rounded-md bg-transparent px-2 text-xs font-medium"
                   aria-label="Rol demo"
                 >
-                  <option value="owner">Dueño</option>
-                  <option value="staff">Personal</option>
-                  <option value="customer">Cliente</option>
+                  <option value="owner">{tr("Dueño", "Owner")}</option>
+                  <option value="staff">{tr("Personal", "Staff")}</option>
+                  <option value="customer">{tr("Cliente", "Customer")}</option>
                 </select>
               </div>
             )}
@@ -377,13 +386,13 @@ function AdminShell() {
                 <button
                   onClick={() => navigate("/app/demo")}
                   className="hidden size-10 place-items-center rounded-control text-secondary hover:bg-subtle xl:grid"
-                  aria-label="Iniciar recorrido"
+                  aria-label={tr("Iniciar recorrido", "Start tour")}
                 >
                   <PlayCircle size={18} />
                 </button>
                 <button
                   onClick={() => {
-                    if (window.confirm("¿Restablecer demo?")) {
+                    if (window.confirm(tr("¿Restablecer demo?", "Reset demo?"))) {
                       resetDemo();
                       navigate("/app");
                     }
@@ -398,14 +407,14 @@ function AdminShell() {
             <button
               onClick={() => setLanguage(language === "es" ? "en" : "es")}
               className="grid size-10 place-items-center rounded-control text-xs font-semibold text-secondary hover:bg-subtle"
-              aria-label="Cambiar idioma"
+              aria-label={tr("Cambiar idioma", "Change language")}
             >
               {language.toUpperCase()}
             </button>
             <button
               onClick={toggleTheme}
               className="grid size-10 place-items-center rounded-control text-secondary hover:bg-subtle"
-              aria-label="Cambiar tema"
+              aria-label={tr("Cambiar tema", "Change theme")}
             >
               {theme === "light" ? <Moon size={17} /> : <Sun size={17} />}
             </button>
@@ -416,19 +425,21 @@ function AdminShell() {
           tabIndex={-1}
           className="mx-auto max-w-[1440px] p-4 pb-24 md:p-6 lg:pb-8"
         >
-          <Outlet />
+          <Suspense fallback={<PageSkeleton label={tr("Cargando…", "Loading…")} />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
       <nav
         className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t bg-surface/95 p-1 backdrop-blur lg:hidden"
-        aria-label="Navegación móvil"
+        aria-label={tr("Navegación móvil", "Mobile navigation")}
       >
         {(
           [
-            ["/app", "Inicio", LayoutDashboard],
-            ["/app/customers", "Clientes", Users],
-            ["/app/visits", "Visitas", QrCode],
-            ["/app/campaigns", "Campañas", WalletCards],
+            ["/app", tr("Inicio", "Home"), LayoutDashboard],
+            ["/app/customers", t(language, "customers"), Users],
+            ["/app/visits", t(language, "visits"), QrCode],
+            ["/app/campaigns", t(language, "campaigns"), WalletCards],
           ] as const
         ).map(([path, label, Icon]) => (
           <NavLink
@@ -451,7 +462,7 @@ function AdminShell() {
           className="flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-control text-[10px] font-medium text-secondary"
         >
           <Menu size={18} />
-          Más
+          {tr("Más", "More")}
         </button>
       </nav>
       {commands && (
@@ -495,7 +506,8 @@ function SideLink({
 }
 
 function StaffShell() {
-  const { scenario, user, setDemoRole, logout } = useApp();
+  const { scenario, user, setDemoRole, logout, language, setLanguage } = useApp();
+  const tr = useTr();
   const navigate = useNavigate();
   const data = demoScenarios[scenario];
   return (
@@ -506,7 +518,7 @@ function StaffShell() {
           <span className="hidden h-5 border-l sm:block" />
           <div className="hidden sm:block">
             <p className="text-sm font-medium">{data.locations[0]}</p>
-            <p className="text-xs text-secondary">Modo personal</p>
+            <p className="text-xs text-secondary">{tr("Modo personal", "Staff mode")}</p>
           </div>
           <Badge tone="gold">Demo</Badge>
           <div className="ml-auto flex items-center gap-2">
@@ -522,17 +534,24 @@ function StaffShell() {
               }}
               aria-label="Rol demo"
             >
-              <option value="owner">Dueño</option>
-              <option value="staff">Personal</option>
-              <option value="customer">Cliente</option>
+              <option value="owner">{tr("Dueño", "Owner")}</option>
+              <option value="staff">{tr("Personal", "Staff")}</option>
+              <option value="customer">{tr("Cliente", "Customer")}</option>
             </select>
+            <button
+              onClick={() => setLanguage(language === "es" ? "en" : "es")}
+              className="grid size-11 place-items-center rounded-control text-xs font-semibold text-secondary"
+              aria-label={tr("Cambiar idioma", "Change language")}
+            >
+              {language.toUpperCase()}
+            </button>
             <button
               onClick={() => {
                 logout();
                 navigate("/login");
               }}
               className="grid size-11 place-items-center rounded-control text-secondary"
-              aria-label="Cerrar sesión"
+              aria-label={tr("Cerrar sesión", "Log out")}
             >
               <LogOut size={18} />
             </button>
@@ -540,9 +559,11 @@ function StaffShell() {
         </div>
       </header>
       <main id="main-content" className="mx-auto max-w-3xl p-4 md:p-8">
-        <Outlet />
+        <Suspense fallback={<PageSkeleton label={tr("Cargando…", "Loading…")} />}>
+          <Outlet />
+        </Suspense>
       </main>
-      <p className="sr-only">Sesión de {user?.name}</p>
+      <p className="sr-only">{tr("Sesión de", "Signed in as")} {user?.name}</p>
     </div>
   );
 }
